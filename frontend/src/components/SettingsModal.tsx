@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Device, MqttStatusPayload } from '../types/index.js';
-import { Settings, X, Plus, Trash2, Cpu, Radio, Server, Check } from 'lucide-react';
+import { Settings, X, Plus, Trash2, Cpu, Radio, Server, Check, Globe } from 'lucide-react';
+import { getBackendBaseUrl, setBackendBaseUrl } from '../services/api.js';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -17,7 +18,7 @@ interface SettingsModalProps {
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   onClose,
-  devices,
+  devices = [],
   activeDeviceId,
   onSelectDevice,
   onOpenPairing,
@@ -25,9 +26,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   isServerConnected,
   mqttStatus,
 }) => {
+  const [backendUrlInput, setBackendUrlInput] = useState<string>(() => getBackendBaseUrl());
+  const [urlSaved, setUrlSaved] = useState<boolean>(false);
+
   if (!isOpen) return null;
 
-  const currentDevice = devices.find((d) => d.deviceId === activeDeviceId);
+  const safeDevices = Array.isArray(devices) ? devices : [];
+  const currentDevice = safeDevices.find((d) => d.deviceId === activeDeviceId);
+
+  const handleSaveBackendUrl = (e: React.FormEvent) => {
+    e.preventDefault();
+    setBackendBaseUrl(backendUrlInput);
+    setUrlSaved(true);
+    setTimeout(() => setUrlSaved(false), 2500);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in overflow-y-auto">
@@ -55,7 +67,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2.5">
             <label className="text-xs font-mono font-semibold uppercase tracking-wider text-slate-400">
-              Danh sách thiết bị đã lưu ({devices.length})
+              Danh sách thiết bị đã lưu ({safeDevices.length})
             </label>
             <button
               onClick={() => {
@@ -70,12 +82,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
 
           <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-            {devices.length === 0 ? (
+            {safeDevices.length === 0 ? (
               <div className="text-xs text-slate-500 text-center py-4 bg-[#121927] rounded-xl border border-[#1b263b]">
                 Chưa có thiết bị nào. Nhấn &quot;Thêm mới&quot; để ghép nối.
               </div>
             ) : (
-              devices.map((device) => {
+              safeDevices.map((device) => {
                 const isSelected = device.deviceId === activeDeviceId;
                 const isOnline = device.availability === 'online';
 
@@ -143,6 +155,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </button>
           </div>
         )}
+
+        {/* Backend Server URL Configuration */}
+        <div className="mb-6 p-4 rounded-xl bg-[#0b101a] border border-[#182335]">
+          <div className="text-xs font-mono font-semibold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-2">
+            <Globe className="w-4 h-4 text-amber-400" />
+            <span>Địa chỉ máy chủ Backend (Node.js API &amp; WS)</span>
+          </div>
+          <p className="text-[11px] text-slate-400 mb-3 leading-relaxed">
+            Nếu chạy web trên Vercel hoặc mạng khác, hãy nhập URL của máy chủ Node.js (ví dụ: <code className="text-amber-300">https://your-backend.onrender.com</code>). Để trống nếu chạy chung máy chủ.
+          </p>
+          <form onSubmit={handleSaveBackendUrl} className="flex gap-2">
+            <input
+              type="text"
+              value={backendUrlInput}
+              onChange={(e) => setBackendUrlInput(e.target.value)}
+              placeholder="Mặc định: /api và /ws cùng nguồn"
+              className="flex-1 bg-[#121a28] border border-[#1f2c42] rounded-xl px-3 py-2 text-xs font-mono text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-amber-500/60 transition-colors"
+            />
+            <button
+              type="submit"
+              className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs tracking-wide transition-all cursor-pointer shadow-sm active:scale-95 shrink-0"
+            >
+              {urlSaved ? 'Đã lưu!' : 'Lưu & Kết nối'}
+            </button>
+          </form>
+        </div>
 
         {/* Infrastructure / MQTT Status */}
         <div className="mb-6 p-4 rounded-xl bg-[#0b101a] border border-[#182335] space-y-2.5">

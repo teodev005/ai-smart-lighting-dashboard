@@ -152,11 +152,13 @@ export default function App() {
   // Handle incoming WebSocket messages
   const handleWsMessage = useCallback((msg: WebSocketMessage) => {
     if (msg.type === 'devices-list') {
-      if (msg.payload.devices) {
+      const devList = Array.isArray(msg?.payload?.devices) ? msg.payload.devices : [];
+      if (devList.length > 0) {
         setDevices((prev) => {
+          const prevList = Array.isArray(prev) ? prev : [];
           // preserve existing runtime telemetry if newer
-          return msg.payload.devices.map((newDev) => {
-            const old = prev.find((o) => o.deviceId === newDev.deviceId);
+          return devList.map((newDev) => {
+            const old = prevList.find((o) => o.deviceId === newDev.deviceId);
             if (old?.lastTelemetryTime && (!newDev.lastTelemetryTime || old.lastTelemetryTime > newDev.lastTelemetryTime)) {
               return { ...newDev, lastTelemetryTime: old.lastTelemetryTime, lastTelemetry: old.lastTelemetry };
             }
@@ -164,27 +166,30 @@ export default function App() {
           });
         });
         setActiveDeviceId((prev) => {
-          if (prev && msg.payload.devices.some((d) => d.deviceId === prev)) return prev;
-          return msg.payload.devices.length > 0 ? msg.payload.devices[0].deviceId : null;
+          if (prev && devList.some((d) => d.deviceId === prev)) return prev;
+          return devList.length > 0 ? devList[0].deviceId : null;
         });
       }
     } else if (msg.type === 'device-availability') {
-      const { deviceId, availability } = msg.payload;
+      const { deviceId, availability } = msg.payload || {};
+      if (!deviceId) return;
       setDevices((prev) =>
-        prev.map((d) =>
+        (prev || []).map((d) =>
           d.deviceId === deviceId
-            ? { ...d, availability, lastAvailabilityTime: msg.payload.timestamp }
+            ? { ...d, availability, lastAvailabilityTime: msg.payload?.timestamp }
             : d
         )
       );
     } else if (msg.type === 'device-telemetry') {
-      ingestTelemetry(msg.payload.deviceId, msg.payload.telemetry);
+      if (msg.payload?.deviceId && msg.payload?.telemetry) {
+        ingestTelemetry(msg.payload.deviceId, msg.payload.telemetry);
+      }
     } else if (msg.type === 'command-result') {
-      const { command, success, message } = msg.payload;
+      const { command, success, message } = msg.payload || {};
       if (success) {
-        addToast('success', 'Lệnh thành công', message);
+        addToast('success', 'Lệnh thành công', message || '');
       } else {
-        addToast('error', 'Lỗi gửi lệnh', message);
+        addToast('error', 'Lỗi gửi lệnh', message || '');
       }
     }
   }, [ingestTelemetry, addToast]);
@@ -199,11 +204,12 @@ export default function App() {
     fetchDevices()
       .then((data) => {
         if (!isMounted) return;
-        setDevices(data.devices);
-        if (data.devices.length > 0) {
-          setActiveDeviceId(data.devices[0].deviceId);
+        const deviceList = Array.isArray(data?.devices) ? data.devices : [];
+        setDevices(deviceList);
+        if (deviceList.length > 0) {
+          setActiveDeviceId((prev) => prev || deviceList[0].deviceId);
           const initialMap: Record<string, TelemetryData> = {};
-          for (const d of data.devices) {
+          for (const d of deviceList) {
             if (d.lastTelemetry) {
               initialMap[d.deviceId] = d.lastTelemetry;
             }
@@ -212,14 +218,30 @@ export default function App() {
         }
       })
       .catch((err) => {
-        console.error('Lỗi tải danh sách thiết bị:', err);
+        console.warn('Lỗi tải danh sách thiết bị:', err);
+        if (isMounted) setDevices([]);
       })
       .finally(() => {
         if (isMounted) setIsLoading(false);
       });
 
+    const handleUrlChange = () => {
+      fetchDevices()
+        .then((data) => {
+          if (!isMounted) return;
+          const list = Array.isArray(data?.devices) ? data.devices : [];
+          setDevices(list);
+          if (list.length > 0) {
+            setActiveDeviceId((prev) => (list.some((d) => d.deviceId === prev) ? prev : list[0].deviceId));
+          }
+        })
+        .catch(() => {});
+    };
+    window.addEventListener('backend-url-changed', handleUrlChange);
+
     return () => {
       isMounted = false;
+      window.removeEventListener('backend-url-changed', handleUrlChange);
     };
   }, []);
 
@@ -228,7 +250,7 @@ export default function App() {
     const pollTimer = setInterval(() => {
       fetchDevices()
         .then((data) => {
-          if (!data?.devices || data.devices.length === 0) return;
+          if (!data?.devices || !Array.isArray(data.devices) || data.devices.length === 0) return;
           for (const d of data.devices) {
             if (d.lastTelemetry) {
               const override = manualOverrideRef.current;
@@ -266,7 +288,7 @@ export default function App() {
 
   // Currently active device
   const activeDevice = useMemo(() => {
-    return devices.find((d) => d.deviceId === activeDeviceId);
+    return (devices || []).find((d) => d.deviceId === activeDeviceId);
   }, [devices, activeDeviceId]);
 
   // Current telemetry for active device
@@ -416,7 +438,7 @@ export default function App() {
   }
 
   // If no devices exist at all -> Onboarding Screen
-  const hasNoDevices = devices.length === 0;
+  const hasNoDevices = !Array.isArray(devices) || devices.length === 0;
 
   return (
     <div className="min-h-screen bg-[#070b12] text-slate-100 flex flex-col font-sans transition-colors duration-200 selection:bg-amber-500/20 selection:text-amber-400 relative">
@@ -444,6 +466,26 @@ export default function App() {
 
         {/* Main Content Area */}
         <main className="flex-1 max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-7">
+          {!isServerConnected && (
+            <div className="mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-300">
+              <div className="flex items-center gap-3">
+                <span className="relative flex h-2.5 w-2.5 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+                </span>
+                <div className="text-xs">
+                  <span className="font-bold text-amber-200">Chưa kết nối máy chủ Backend:</span> Ứng dụng chưa nhận được tín hiệu từ máy chủ Node.js/WebSocket. Nếu bạn đang chạy web trên Vercel, hãy vào Cài đặt để nhập URL backend đã triển khai.
+                </div>
+              </div>
+              <button
+                onClick={() => setIsSettingsOpen(true)}
+                className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs tracking-wide transition-all shrink-0 cursor-pointer shadow-md shadow-amber-500/10 active:scale-95"
+              >
+                Cấu hình URL
+              </button>
+            </div>
+          )}
+
           {hasNoDevices ? (
             <OnboardingView onPair={handlePair} />
           ) : activeDevice ? (

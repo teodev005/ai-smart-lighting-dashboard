@@ -3,9 +3,26 @@ import {
   MqttStatusPayload,
   WebSocketMessage,
 } from '../types/index.js';
+import { getBackendBaseUrl } from '../services/api.js';
 
 interface UseWebSocketOptions {
   onMessage?: (msg: WebSocketMessage) => void;
+}
+
+function getWsUrl(): string {
+  const backendBase = getBackendBaseUrl();
+  if (backendBase) {
+    const wsBase = backendBase.replace(/^http/, 'ws');
+    return `${wsBase}/ws`;
+  }
+  const envWs = import.meta.env.VITE_WS_URL;
+  if (envWs) return envWs;
+  if (typeof window !== 'undefined') {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.host;
+    return `${protocol}//${host}/ws`;
+  }
+  return 'ws://localhost:3000/ws';
 }
 
 export function useWebSocket({ onMessage }: UseWebSocketOptions = {}) {
@@ -34,9 +51,7 @@ export function useWebSocket({ onMessage }: UseWebSocketOptions = {}) {
       wsRef.current = null;
     }
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host;
-    const wsUrl = `${protocol}//${host}/ws`;
+    const wsUrl = getWsUrl();
 
     try {
       const ws = new WebSocket(wsUrl);
@@ -121,8 +136,14 @@ export function useWebSocket({ onMessage }: UseWebSocketOptions = {}) {
     isDestroyedRef.current = false;
     connect();
 
+    const handleUrlChange = () => {
+      connect();
+    };
+    window.addEventListener('backend-url-changed', handleUrlChange);
+
     return () => {
       isDestroyedRef.current = true;
+      window.removeEventListener('backend-url-changed', handleUrlChange);
       if (disconnectGraceTimerRef.current) clearTimeout(disconnectGraceTimerRef.current);
       if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
       if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
