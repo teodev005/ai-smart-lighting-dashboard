@@ -1,0 +1,6 @@
+{
+  "name": "AI Smart Lighting Dashboard",
+  "description": "Hệ thống quản lý đèn chiếu sáng thông minh ESP32 AI Smart Lighting",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
