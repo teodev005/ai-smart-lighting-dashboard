@@ -14,12 +14,14 @@ import {
 interface OnboardingViewProps {
   onPair: (code: string) => Promise<void>;
   onCancel?: () => void;
+  onOpenSettings?: () => void;
   isModal?: boolean;
 }
 
 export const OnboardingView: React.FC<OnboardingViewProps> = ({
   onPair,
   onCancel,
+  onOpenSettings,
   isModal = false,
 }) => {
   const [code, setCode] = useState<string>('');
@@ -178,13 +180,24 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({
             <div className="flex-1">
               <div className="font-semibold">Ghép nối thất bại</div>
               <div className="text-xs opacity-90 mt-0.5 leading-relaxed">{error}</div>
-              <button
-                type="button"
-                onClick={handleRetry}
-                className="mt-2 text-xs font-semibold text-rose-600 dark:text-rose-400 underline hover:no-underline cursor-pointer"
-              >
-                Thử lại
-              </button>
+              <div className="flex items-center gap-4 mt-2">
+                <button
+                  type="button"
+                  onClick={handleRetry}
+                  className="text-xs font-semibold text-rose-600 dark:text-rose-400 underline hover:no-underline cursor-pointer"
+                >
+                  Thử lại
+                </button>
+                {onOpenSettings && (error.includes('405') || error.includes('Backend') || error.includes('JSON')) && (
+                  <button
+                    type="button"
+                    onClick={onOpenSettings}
+                    className="text-xs font-bold text-amber-500 dark:text-amber-400 hover:underline cursor-pointer flex items-center gap-1"
+                  >
+                    ⚙️ Cấu hình URL Backend
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         )}

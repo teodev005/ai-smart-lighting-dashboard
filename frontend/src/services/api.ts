@@ -35,6 +35,11 @@ export function getApiBaseUrl(): string {
 async function handleResponse<T>(res: Response): Promise<T> {
   const contentType = res.headers.get('content-type') || '';
   if (!contentType.includes('application/json')) {
+    if (res.status === 405) {
+      throw new Error(
+        `Lỗi 405 (Method Not Allowed): Máy chủ web tĩnh (như Vercel) từ chối lệnh POST vì Backend Node.js chưa chạy hoặc URL Backend chưa được cấu hình trong Cài đặt.`
+      );
+    }
     throw new Error(
       `Máy chủ không trả về JSON (Mã trạng thái: ${res.status}, Kiểu nội dung: ${contentType || 'không rõ'}). Backend có thể chưa chạy hoặc URL máy chủ chưa chính xác.`
     );

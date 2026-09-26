@@ -487,7 +487,10 @@ export default function App() {
           )}
 
           {hasNoDevices ? (
-            <OnboardingView onPair={handlePair} />
+            <OnboardingView
+              onPair={handlePair}
+              onOpenSettings={() => setIsSettingsOpen(true)}
+            />
           ) : activeDevice ? (
             <div className="space-y-6">
               {/* Top Row: Left Chamber Telemetry Card + Right Tactile Controls Card */}
@@ -552,6 +555,10 @@ export default function App() {
             isModal={true}
             onPair={handlePair}
             onCancel={() => setIsPairingModalOpen(false)}
+            onOpenSettings={() => {
+              setIsPairingModalOpen(false);
+              setIsSettingsOpen(true);
+            }}
           />
         </div>
       )}

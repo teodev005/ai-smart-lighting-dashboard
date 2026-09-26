@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: ai-smart-lighting-backend
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MQTT_BROKER_URL
+        value: mqtt://broker.emqx.io:1883
