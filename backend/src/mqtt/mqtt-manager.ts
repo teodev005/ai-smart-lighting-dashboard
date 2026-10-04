@@ -4,6 +4,7 @@ import { WebSocketManager } from '../websocket/ws-manager.js';
 import {
   Device,
   ControlMode,
+  FanMode,
   AvailabilityStatus,
   PairingPayload
 } from '../../../shared/types/index.js';
@@ -509,6 +510,36 @@ export class MqttManager {
           });
           resolve({ pwm, percent });
         }
+      });
+    });
+  }
+
+  public async sendFanMode(deviceId: string, mode: FanMode): Promise<void> {
+    if (!this.isConnected || !this.client) throw new Error('Máy chủ chưa kết nối tới broker MQTT.');
+    if (!['OFF', 'MANUAL', 'AUTO'].includes(mode)) throw new Error('Chế độ quạt không hợp lệ.');
+    const topic = `ai-smart-lighting/${deviceId}/cmd/fan/mode`;
+    return new Promise<void>((resolve, reject) => {
+      this.client?.publish(topic, mode, { qos: 1 }, (err) => {
+        this.wsManager.broadcast({ type: 'command-result', payload: {
+          deviceId, command: 'fan-mode', success: !err,
+          message: err ? `Gửi chế độ quạt thất bại: ${err.message}` : `Đã chuyển quạt sang ${mode}`, value: mode,
+        }});
+        if (err) reject(err); else resolve();
+      });
+    });
+  }
+
+  public async sendFanSpeed(deviceId: string, speed: number): Promise<void> {
+    if (!this.isConnected || !this.client) throw new Error('Máy chủ chưa kết nối tới broker MQTT.');
+    const percent = Math.max(0, Math.min(100, Math.round(speed)));
+    const topic = `ai-smart-lighting/${deviceId}/cmd/fan/speed`;
+    return new Promise<void>((resolve, reject) => {
+      this.client?.publish(topic, String(percent), { qos: 1 }, (err) => {
+        this.wsManager.broadcast({ type: 'command-result', payload: {
+          deviceId, command: 'fan-speed', success: !err,
+          message: err ? `Gửi tốc độ quạt thất bại: ${err.message}` : `Đã đặt tốc độ quạt ${percent}%`, value: percent,
+        }});
+        if (err) reject(err); else resolve();
       });
     });
   }

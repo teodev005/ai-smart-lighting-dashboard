@@ -2,6 +2,7 @@ import {
   AvailabilityStatus,
   ConnectionStatus,
   ControlMode,
+  FanMode,
   TelemetryData,
 } from '../types/index.js';
 
@@ -100,6 +101,12 @@ export function parseTelemetry(raw: unknown, isRetained: boolean = false): Telem
   const aiSamples = Number(obj.aiSamples);
   const aiClasses = Number(obj.aiClasses);
   const uptimeMs = Number(obj.uptimeMs);
+  const fanMode: FanMode = ['OFF', 'MANUAL', 'AUTO'].includes(String(obj.fanMode))
+    ? obj.fanMode as FanMode : 'OFF';
+  const fanPercent = Number(obj.fanPercent ?? 0);
+  const fanTargetPercent = Number(obj.fanTargetPercent ?? fanPercent);
+  const fanManualPercent = Number(obj.fanManualPercent ?? fanPercent);
+  const fanPwm = Number(obj.fanPwm ?? Math.round(fanPercent * 2.55));
 
   if (
     isNaN(adc) || adc < 0 || adc > 4095 ||
@@ -112,7 +119,11 @@ export function parseTelemetry(raw: unknown, isRetained: boolean = false): Telem
     isNaN(brightness) || brightness < 0 || brightness > 100 ||
     isNaN(aiSamples) || aiSamples < 0 ||
     isNaN(aiClasses) || aiClasses < 0 ||
-    isNaN(uptimeMs) || uptimeMs < 0
+    isNaN(uptimeMs) || uptimeMs < 0 ||
+    isNaN(fanPercent) || fanPercent < 0 || fanPercent > 100 ||
+    isNaN(fanTargetPercent) || fanTargetPercent < 0 || fanTargetPercent > 100 ||
+    isNaN(fanManualPercent) || fanManualPercent < 0 || fanManualPercent > 100 ||
+    isNaN(fanPwm) || fanPwm < 0 || fanPwm > 255
   ) {
     return null;
   }
@@ -139,6 +150,13 @@ export function parseTelemetry(raw: unknown, isRetained: boolean = false): Telem
     brightness: Math.round(brightness),
     aiSamples: Math.round(aiSamples),
     aiClasses: Math.round(aiClasses),
+    fanMode,
+    fanPercent: Math.round(fanPercent),
+    fanTargetPercent: Math.round(fanTargetPercent),
+    fanManualPercent: Math.round(fanManualPercent),
+    fanPwm: Math.round(fanPwm),
+    fanReason: typeof obj.fanReason === 'string' ? obj.fanReason : '',
+    dhtValid: Boolean(obj.dhtValid),
     uptimeMs: Math.round(uptimeMs),
     deskLampPwm,
     receivedAt: Date.now(),

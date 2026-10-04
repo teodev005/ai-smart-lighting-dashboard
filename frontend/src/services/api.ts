@@ -1,5 +1,6 @@
 import {
   ControlMode,
+  FanMode,
   Device,
   MqttStatusPayload,
 } from '../types/index.js';
@@ -118,6 +119,20 @@ export async function resetDeviceAi(deviceId: string): Promise<void> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({}),
+  });
+  await handleResponse<{ success: boolean; message: string }>(res);
+}
+
+export async function setDeviceFanMode(deviceId: string, mode: FanMode): Promise<void> {
+  const res = await fetch(`${getApiBaseUrl()}/devices/${encodeURIComponent(deviceId)}/commands/fan/mode`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode }),
+  });
+  await handleResponse<{ success: boolean; message: string }>(res);
+}
+
+export async function setDeviceFanSpeed(deviceId: string, speed: number): Promise<void> {
+  const res = await fetch(`${getApiBaseUrl()}/devices/${encodeURIComponent(deviceId)}/commands/fan/speed`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ speed }),
   });
   await handleResponse<{ success: boolean; message: string }>(res);
 }

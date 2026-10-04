@@ -3,6 +3,7 @@ import {
   Device,
   TelemetryData,
   ControlMode,
+  FanMode,
   ChartDataPoint,
   ToastMessage,
   WebSocketMessage,
@@ -14,7 +15,9 @@ import {
   deleteDevice,
   setDeviceMode,
   setDeviceBrightness,
-  resetDeviceAi
+  resetDeviceAi,
+  setDeviceFanMode,
+  setDeviceFanSpeed
 } from './services/api.js';
 import { useWebSocket } from './hooks/useWebSocket.js';
 import { calculateConnectionState, formatTimeShort } from './utils/formatters.js';
@@ -29,6 +32,7 @@ import { ConfirmationModal } from './components/ConfirmationModal.js';
 import { SettingsModal } from './components/SettingsModal.js';
 import { ToastContainer } from './components/ToastContainer.js';
 import { ShapeGrid } from './components/ShapeGrid.js';
+import { FanControlCard } from './components/FanControlCard.js';
 
 export default function App() {
   const [devices, setDevices] = useState<Device[]>([]);
@@ -425,6 +429,26 @@ export default function App() {
     await setDeviceBrightness(activeDeviceId, clamped, false);
   };
 
+  const handleSetFanMode = async (mode: FanMode) => {
+    if (!activeDeviceId) return;
+    setTelemetryMap((prev) => prev[activeDeviceId]
+      ? { ...prev, [activeDeviceId]: { ...prev[activeDeviceId], fanMode: mode } } : prev);
+    await setDeviceFanMode(activeDeviceId, mode);
+  };
+
+  const handleSetFanSpeed = async (speed: number) => {
+    if (!activeDeviceId) return;
+    const value = Math.max(0, Math.min(100, Math.round(speed)));
+    setTelemetryMap((prev) => prev[activeDeviceId] ? {
+      ...prev,
+      [activeDeviceId]: {
+        ...prev[activeDeviceId], fanMode: 'MANUAL', fanManualPercent: value,
+        fanPercent: value, fanTargetPercent: value, fanPwm: Math.round(value * 2.55), receivedAt: Date.now(),
+      },
+    } : prev);
+    await setDeviceFanSpeed(activeDeviceId, value);
+  };
+
   // If loading initially
   if (isLoading) {
     return (
@@ -509,6 +533,14 @@ export default function App() {
                   />
                 </div>
               </div>
+
+              <FanControlCard
+                telemetry={currentTelemetry}
+                disabled={isControlDisabled}
+                disabledReason={controlDisabledReason}
+                onSetMode={handleSetFanMode}
+                onSetSpeed={handleSetFanSpeed}
+              />
 
               {/* Middle Row: 4 Metric Cards */}
               <MetricsGrid telemetry={currentTelemetry} />

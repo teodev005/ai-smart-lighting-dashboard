@@ -3,6 +3,7 @@
  */
 
 export type ControlMode = 'AUTO' | 'MANUAL' | 'AI';
+export type FanMode = 'OFF' | 'MANUAL' | 'AUTO';
 
 export type AvailabilityStatus = 'online' | 'offline' | 'unknown';
 
@@ -29,6 +30,13 @@ export interface TelemetryData {
   brightness: number;   // 0 - 100 (%)
   aiSamples: number;    // Number of AI samples
   aiClasses: number;    // Number of AI classes (target: 5)
+  fanMode: FanMode;
+  fanPercent: number;
+  fanTargetPercent: number;
+  fanManualPercent: number;
+  fanPwm: number;
+  fanReason: string;
+  dhtValid: boolean;
   uptimeMs: number;     // ESP32 uptime in ms
   deskLampPwm: number;  // Desk lamp PWM (~70% of ceiling light)
   receivedAt: number;   // Timestamp ms when backend processed
@@ -75,6 +83,9 @@ export interface BrightnessCommandRequest {
   brightness: number; // 0 - 100 (%) or PWM 0 - 255
 }
 
+export interface FanModeCommandRequest { mode: FanMode; }
+export interface FanSpeedCommandRequest { speed: number; }
+
 export interface MqttStatusPayload {
   connected: boolean;
   broker: string;
@@ -83,7 +94,7 @@ export interface MqttStatusPayload {
 
 export interface CommandResultPayload {
   deviceId: string;
-  command: 'mode' | 'brightness' | 'ai-reset';
+  command: 'mode' | 'brightness' | 'fan-mode' | 'fan-speed' | 'ai-reset';
   success: boolean;
   message: string;
   value?: unknown;

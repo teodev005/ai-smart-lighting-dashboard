@@ -3,7 +3,7 @@ import { DeviceStorage } from '../database/storage.js';
 import { MqttManager } from '../mqtt/mqtt-manager.js';
 import { WebSocketManager } from '../websocket/ws-manager.js';
 import { validatePairingCode } from '../../../shared/utils/converters.js';
-import { ControlMode } from '../../../shared/types/index.js';
+import { ControlMode, FanMode } from '../../../shared/types/index.js';
 
 export class DeviceController {
   constructor(
@@ -189,6 +189,36 @@ export class DeviceController {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       res.status(500).json({ success: false, error: msg });
+    }
+  };
+
+  public setFanMode = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { deviceId } = req.params;
+      const { mode } = req.body;
+      if (!['OFF', 'MANUAL', 'AUTO'].includes(mode) || !this.storage.get(deviceId)) {
+        res.status(400).json({ success: false, error: 'Thiết bị hoặc chế độ quạt không hợp lệ.' });
+        return;
+      }
+      await this.mqttManager.sendFanMode(deviceId, mode as FanMode);
+      res.json({ success: true, message: `Đã chuyển quạt sang ${mode}` });
+    } catch (err: unknown) {
+      res.status(500).json({ success: false, error: err instanceof Error ? err.message : String(err) });
+    }
+  };
+
+  public setFanSpeed = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { deviceId } = req.params;
+      const speed = Number(req.body.speed);
+      if (!this.storage.get(deviceId) || !Number.isFinite(speed) || speed < 0 || speed > 100) {
+        res.status(400).json({ success: false, error: 'Thiết bị hoặc tốc độ quạt không hợp lệ (0-100%).' });
+        return;
+      }
+      await this.mqttManager.sendFanSpeed(deviceId, speed);
+      res.json({ success: true, message: `Đã đặt tốc độ quạt ${Math.round(speed)}%` });
+    } catch (err: unknown) {
+      res.status(500).json({ success: false, error: err instanceof Error ? err.message : String(err) });
     }
   };
 }

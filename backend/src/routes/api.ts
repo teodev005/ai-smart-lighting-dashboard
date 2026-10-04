@@ -13,6 +13,8 @@ export function createApiRouter(deviceController: DeviceController): Router {
   // Commands
   router.post('/devices/:deviceId/commands/mode', deviceController.setMode);
   router.post('/devices/:deviceId/commands/brightness', deviceController.setBrightness);
+  router.post('/devices/:deviceId/commands/fan/mode', deviceController.setFanMode);
+  router.post('/devices/:deviceId/commands/fan/speed', deviceController.setFanSpeed);
   router.post('/devices/:deviceId/commands/ai/reset', deviceController.resetAi);
 
   return router;

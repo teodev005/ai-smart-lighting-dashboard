@@ -8,5 +8,5 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: MQTT_BROKER_URL
+      - key: MQTT_BROKER
         value: mqtt://broker.emqx.io:1883

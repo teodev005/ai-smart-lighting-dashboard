@@ -54,3 +54,15 @@ input[type=range].tech-slider:disabled::-webkit-slider-thumb {
   box-shadow: none;
   cursor: not-allowed;
 }
+
+.fan-stage { perspective: 700px; display: grid; place-items: center; min-height: 220px; }
+.fan-housing { position:relative; width: 205px; aspect-ratio: 1; border-radius: 30%; padding: 18px; transform: rotateX(7deg) rotateY(-10deg); background: linear-gradient(145deg,#223047,#070b12 65%); border: 3px solid #334155; box-shadow: 22px 24px 35px #0009,inset 0 0 35px #000; }
+.fan-housing::before { content:""; display:block; width:100%; height:100%; border-radius:50%; border:7px solid #111827; box-shadow:inset 0 0 22px #000,0 0 0 2px #475569; }
+.fan-rotor { position:absolute; width:142px; height:142px; left:50%; top:50%; margin:-71px; transform-style:preserve-3d; }
+.fan-rotor.is-spinning { animation: fan-spin var(--fan-duration) linear infinite; }
+.fan-blade { position:absolute; left:62px; top:5px; width:19px; height:70px; transform-origin:50% 66px !important; border-radius:80% 20% 55% 35%; background:linear-gradient(90deg,#0e7490,#67e8f9 55%,#164e63); box-shadow:inset -5px -5px 9px #083344aa,0 2px 8px #0008; }
+.fan-hub { position:absolute; z-index:2; left:50%; top:50%; width:42px; height:42px; margin:-21px; display:grid; place-items:center; border-radius:50%; color:#67e8f9; background:radial-gradient(circle at 35% 30%,#475569,#0f172a 70%); border:2px solid #64748b; box-shadow:0 6px 12px #000a; }
+.fan-shadow { width:170px; height:20px; margin-top:-4px; border-radius:50%; background:#0009; filter:blur(10px); }
+.fan-slider::-webkit-slider-thumb { background:#22d3ee !important; box-shadow:0 0 12px #06b6d4 !important; }
+@keyframes fan-spin { to { transform:rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .fan-rotor.is-spinning { animation-duration:2s; } }
